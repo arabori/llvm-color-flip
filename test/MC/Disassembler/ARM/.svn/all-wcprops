@@ -1,0 +1,47 @@
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/llvm-project/!svn/ver/128322/llvm/trunk/test/MC/Disassembler/ARM
+END
+dg.exp
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/llvm-project/!svn/ver/119050/llvm/trunk/test/MC/Disassembler/ARM/dg.exp
+END
+invalid-CPS2p-arm.txt
+K 25
+svn:wc:ra_dav:version-url
+V 91
+/svn/llvm-project/!svn/ver/128283/llvm/trunk/test/MC/Disassembler/ARM/invalid-CPS2p-arm.txt
+END
+invalid-CPS3p-arm.txt
+K 25
+svn:wc:ra_dav:version-url
+V 91
+/svn/llvm-project/!svn/ver/128238/llvm/trunk/test/MC/Disassembler/ARM/invalid-CPS3p-arm.txt
+END
+invalid-VLDMSDB-arm.txt
+K 25
+svn:wc:ra_dav:version-url
+V 93
+/svn/llvm-project/!svn/ver/128238/llvm/trunk/test/MC/Disassembler/ARM/invalid-VLDMSDB-arm.txt
+END
+arm-tests.txt
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/svn/llvm-project/!svn/ver/128306/llvm/trunk/test/MC/Disassembler/ARM/arm-tests.txt
+END
+neon-tests.txt
+K 25
+svn:wc:ra_dav:version-url
+V 84
+/svn/llvm-project/!svn/ver/128243/llvm/trunk/test/MC/Disassembler/ARM/neon-tests.txt
+END
+thumb-tests.txt
+K 25
+svn:wc:ra_dav:version-url
+V 85
+/svn/llvm-project/!svn/ver/128322/llvm/trunk/test/MC/Disassembler/ARM/thumb-tests.txt
+END
