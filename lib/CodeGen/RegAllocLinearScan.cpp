@@ -44,6 +44,7 @@
 #include <queue>
 #include <memory>
 #include <cmath>
+#include <vector>
 
 using namespace llvm;
 
@@ -238,6 +239,14 @@ namespace {
     /// initIntervalSets - initialize the interval sets.
     ///
     void initIntervalSets();
+
+    /// tryColorFlipping - try to utilize color flipping technique before
+    /// spilling a register
+    bool tryColorFlipping(LiveInterval *cur);
+
+    bool isNotMarked(std::vector<LiveInterval*> markedList, LiveInterval *li);
+
+    void tryToFlip(LiveInterval *li);
 
     /// processActiveIntervals - expire old intervals and move non-overlapping
     /// ones to the inactive list.
@@ -1128,6 +1137,14 @@ void RALinScan::assignRegOrStackSlotAtInterval(LiveInterval* cur) {
   }
   DEBUG(dbgs() << "no free registers\n");
 
+  //Parte interessante comeca aqui
+  //nao encontrou registradores livres em todo o processo
+  //tentar iniciar Color Flipping
+  if (this->tryColorFlipping(cur)) {
+    //se conseguir, entao nao sera preciso iniciar a rotina de spill
+    return;
+  }
+
   // Compile the spill weights into an array that is better for scanning.
   std::vector<float> SpillWeights(tri_->getNumRegs(), 0.0f);
   for (std::vector<std::pair<unsigned, float> >::iterator
@@ -1491,6 +1508,44 @@ unsigned RALinScan::getFreePhysReg(LiveInterval* cur,
   return FreeReg;
 }
 
+/// tryColorFlipping - try to execute color flipping before spilling a register
+/// 
+bool RALinScan::tryColorFlipping(LiveInterval *cur) {
+  //somente intervalos com registradores fisicos sao considerados com 'cores'
+  //Construindo lista de vizinhos marcados ao intervalo atual
+  std::vector<LiveInterval*> markedList;  
+
+  //percorrendo lista de intervalos ativos para o ponto atual, marcando e 
+  //tentando fazer o 'flip'
+  for (IntervalPtrs::iterator i = active_.begin(), e = active_.end();
+       i != e; ++i) {
+    if (this->isNotMarked(markedList, i->first)) {
+      //marcando o no
+      DEBUG(dbgs() << "\t\t\tmarking(c): " << i->first->reg << '\n');
+      markedList.insert(markedList.begin(), i->first);
+      //flip
+      this->tryToFlip(i->first);
+    }
+  }
+
+  //se chegou nesse ponto, nao foi possivel fazer o colorflipping, o processo de
+  //spill ocorrera normalmente
+  return false;  
+}
+
+bool RALinScan::isNotMarked(std::vector<LiveInterval*> markedList, LiveInterval *li) {
+  for (std::vector<LiveInterval*>::iterator i = markedList.begin(); i != markedList.end(); ++i) {
+    if (li == *i) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void RALinScan::tryToFlip(LiveInterval *li) {
+  
+}
+
 /// getFreePhysReg - return a free physical register for this virtual register
 /// interval if we have one, otherwise return 0.
 unsigned RALinScan::getFreePhysReg(LiveInterval *cur) {
@@ -1540,3 +1595,4 @@ unsigned RALinScan::getFreePhysReg(LiveInterval *cur) {
 FunctionPass* llvm::createLinearScanRegisterAllocator() {
   return new RALinScan();
 }
+
