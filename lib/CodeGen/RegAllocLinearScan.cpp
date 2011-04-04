@@ -246,7 +246,9 @@ namespace {
 
     bool isNotMarked(std::vector<LiveInterval*> markedList, LiveInterval *li);
 
-    void tryToFlip(LiveInterval *li);
+    bool tryToFlip(LiveInterval *cur, LiveInterval *li);
+
+    bool isColorUnique(LiveInterval *li);
 
     /// processActiveIntervals - expire old intervals and move non-overlapping
     /// ones to the inactive list.
@@ -1140,8 +1142,10 @@ void RALinScan::assignRegOrStackSlotAtInterval(LiveInterval* cur) {
   //Parte interessante comeca aqui
   //nao encontrou registradores livres em todo o processo
   //tentar iniciar Color Flipping
+  DEBUG(dbgs() << "starting color flipping\n");
   if (this->tryColorFlipping(cur)) {
     //se conseguir, entao nao sera preciso iniciar a rotina de spill
+    DEBUG(dbgs() << "color flipping successful\n");
     return;
   }
 
@@ -1511,20 +1515,33 @@ unsigned RALinScan::getFreePhysReg(LiveInterval* cur,
 /// tryColorFlipping - try to execute color flipping before spilling a register
 /// 
 bool RALinScan::tryColorFlipping(LiveInterval *cur) {
-  //somente intervalos com registradores fisicos sao considerados com 'cores'
-  //Construindo lista de vizinhos marcados ao intervalo atual
+  //constructing list with marked live intervals (since we don't want to alter the
+  //LiveInterval class)
   std::vector<LiveInterval*> markedList;  
 
-  //percorrendo lista de intervalos ativos para o ponto atual, marcando e 
-  //tentando fazer o 'flip'
+  //iterating over list of active intervals (neighbors of current LiveInterval),
+  //marking and trying to flip colors
   for (IntervalPtrs::iterator i = active_.begin(), e = active_.end();
        i != e; ++i) {
-    if (this->isNotMarked(markedList, i->first)) {
-      //marcando o no
+    if (this->isNotMarked(markedList, i->first) && this->isColorUnique(i->first)) {
+      //marking the node
       DEBUG(dbgs() << "\t\t\tmarking(c): " << i->first->reg << '\n');
       markedList.insert(markedList.begin(), i->first);
-      //flip
-      this->tryToFlip(i->first);
+      //flip first only the neighbors
+      if (!this->tryToFlip(cur, i->first)) {
+        DEBUG(dbgs() << "cant flip, trying with neighbors of neighbors\n");
+        //couldn't flip with neighbors, trying to flip with neighbors of
+        //neighbors
+
+        //TODO: como pegar neighbors de neighbors??
+        //for (...) {
+        //  if (this->tryToFlip(...)) {
+        //    return true;
+        //  }
+      } else {
+        //in case our flip is successful, we don't need to continue searching caso 
+        return true;
+      }
     }
   }
 
@@ -1533,6 +1550,20 @@ bool RALinScan::tryColorFlipping(LiveInterval *cur) {
   return false;  
 }
 
+/// isColorUnique - checks if the color of the provided LiveInterval is unique, for all of the
+/// the neighbors
+bool RALinScan::isColorUnique(LiveInterval *li) {
+  unsigned nodeColor = li->reg;
+  for (IntervalPtrs::iterator i = active_.begin(), e = active_.end();
+       i != e; ++i) {
+    if (i->first != li && i->first->reg == nodeColor) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/// isNotMarked - checks if the interval is not present in the marked list
 bool RALinScan::isNotMarked(std::vector<LiveInterval*> markedList, LiveInterval *li) {
   for (std::vector<LiveInterval*>::iterator i = markedList.begin(); i != markedList.end(); ++i) {
     if (li == *i) {
@@ -1542,8 +1573,21 @@ bool RALinScan::isNotMarked(std::vector<LiveInterval*> markedList, LiveInterval 
   return true;
 }
 
-void RALinScan::tryToFlip(LiveInterval *li) {
-  
+bool RALinScan::tryToFlip(LiveInterval *cur, LiveInterval *li) {
+  //all registers are in use, so they must be on the active list
+  //or else we wouldn't be trying to flip colors
+  for (IntervalPtrs::iterator i = active_.begin(), e = active_.end();
+        i != e; ++i) {
+    //checks if we aren't the same LiveInterval
+    if (li != i->first) {
+      //hey! we arent in conflict, flipping colors
+      if (! (i->first->overlaps( *li )) ) {
+        //TODO: trocar as cores
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 /// getFreePhysReg - return a free physical register for this virtual register
